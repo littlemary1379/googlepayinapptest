@@ -1,9 +1,10 @@
 package com.mary.onandoff
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import com.android.billingclient.api.*
+import com.google.common.collect.ImmutableList
 import com.mary.onandoff.util.DlogUtil
 import com.mary.onandoff.util.ToastUtil
 import kotlinx.coroutines.CoroutineScope
@@ -11,13 +12,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
+class MainActivity : AppCompatActivity(), PurchasesUpdatedListener, PurchaseHistoryResponseListener {
 
     private val TAG = "MainActivity"
 
     private lateinit var textViewOneTimePayment: TextView
     private lateinit var billingCilent: BillingClient
     private var skuDetailsList: List<SkuDetails> = mutableListOf()
+    private var productDetailsList: List<ProductDetails> = mutableListOf()
     private lateinit var consumeListenser : ConsumeResponseListener
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,6 +60,7 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
                     CoroutineScope(Dispatchers.Main).launch {
                         querySkuDetails()
                     }
+                    getPurchaseHistory()
 
                 }
             }
@@ -65,12 +68,18 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
         })
 
         consumeListenser = ConsumeResponseListener { billingResult, purchaseToken ->
-           if(billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+            DlogUtil.d(TAG, "billingResult.responseCode : ${billingResult.responseCode}")
+            if(billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                DlogUtil.d(TAG, "소모 성공")
            } else {
                DlogUtil.d(TAG, "소모 실패")
            }
         }
+
+    }
+
+    fun getPurchaseHistory() {
+        billingCilent.queryPurchaseHistoryAsync(BillingClient.SkuType.INAPP, this)
     }
 
     /**
@@ -79,35 +88,62 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
      * */
     suspend fun querySkuDetails() {
         DlogUtil.d(TAG, "querySkuDetails")
-        val skuList = ArrayList<String>()
-        skuList.add("test2")
-        //skuList.add("gas")
-        val params = SkuDetailsParams.newBuilder()
-        params.setSkusList(skuList).setType(BillingClient.SkuType.INAPP)
+//        val skuList = ArrayList<String>()
+//        skuList.add("test2")
+//        //skuList.add("gas")
+//        val params = SkuDetailsParams.newBuilder()
+//        params.setSkusList(skuList).setType(BillingClient.SkuType.INAPP)
+//
+//        //querySkuDetails 코틀린 확장 기능 활용
+//        val skuDetailsResult = withContext(Dispatchers.IO) {
+//            billingCilent.querySkuDetails(params.build())
+//        }
+//
+//        if (skuDetailsResult.skuDetailsList.isNullOrEmpty()) {
+//            DlogUtil.d(TAG, "skuDetailsResult list null")
+//            ToastUtil.showShortToast(this, "목록 미노출")
+//        } else {
+//            ToastUtil.showShortToast(this, "목록 노출")
+//            skuDetailsList = skuDetailsResult.skuDetailsList!!
+//            for (i: Int in 0 until skuDetailsResult.skuDetailsList!!.size) {
+//                DlogUtil.d(TAG, skuDetailsResult.skuDetailsList!![i].originalJson)
+//            }
+//        }
 
-        //querySkuDetails 코틀린 확장 기능 활용
-        val skuDetailsResult = withContext(Dispatchers.IO) {
-            billingCilent.querySkuDetails(params.build())
-        }
+        //5.0 마이그레이션
+        val tempParam = QueryProductDetailsParams.newBuilder()
+            .setProductList(
+                ImmutableList.of(
+                    QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId("test2")
+                        .setProductType(BillingClient.ProductType.INAPP)
+                        .build()
+                )
+            ).build()
 
-        if (skuDetailsResult.skuDetailsList.isNullOrEmpty()) {
-            DlogUtil.d(TAG, "skuDetailsResult list null")
-            ToastUtil.showShortToast(this, "목록 미노출")
-        } else {
-            ToastUtil.showShortToast(this, "목록 노출")
-            skuDetailsList = skuDetailsResult.skuDetailsList!!
-            for (i: Int in 0 until skuDetailsResult.skuDetailsList!!.size) {
-                DlogUtil.d(TAG, skuDetailsResult.skuDetailsList!![i].originalJson)
+
+        billingCilent.queryProductDetailsAsync(tempParam) { billingResult, mutableList ->
+            DlogUtil.d(TAG, "?????")
+            productDetailsList = mutableList
+            for (i: Int in 0 until mutableList!!.size) {
+                DlogUtil.d(TAG, mutableList[i].name)
+                //var productDetailsParams : BillingFlowParams.ProductDetailsParams =
+                   // tempList.add(productDetailsParams)
             }
         }
+
     }
 
     private fun setListener() {
         textViewOneTimePayment.setOnClickListener {
             DlogUtil.d(TAG, "click")
 
-            val flowParams = BillingFlowParams.newBuilder()
-                .setSkuDetails(skuDetailsList[0])
+            var flowProductDetailParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+                .setProductDetails(productDetailsList[0])
+                .build()
+
+            var flowParams = BillingFlowParams.newBuilder()
+                .setProductDetailsParamsList(listOf(flowProductDetailParams))
                 .build()
 
             val responseCode = billingCilent.launchBillingFlow(this, flowParams).responseCode
@@ -121,13 +157,16 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
         billingResult: BillingResult,
         purchases: MutableList<Purchase>?
     ) {
-        DlogUtil.d(TAG, "????")
+        DlogUtil.d(TAG, "???? ${billingResult.responseCode}")
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
             for (purchase in purchases) {
+                DlogUtil.d(TAG,"구매 성공")
                 ToastUtil.showShortToast(this, "구매 성공")
                 // 거래 성공 코드
                 // ?
-                //handlePurchase(purchase)
+
+
+//                handlePurchase(purchase)
 
                 val consumeParams = ConsumeParams.newBuilder()
                     .setPurchaseToken(purchase.purchaseToken)
@@ -142,7 +181,18 @@ class MainActivity : AppCompatActivity(), PurchasesUpdatedListener {
         }
     }
 
-//    fun handlePurchase(purchase: Purchase) {
+    override fun onPurchaseHistoryResponse(
+        p0: BillingResult,
+        p1: MutableList<PurchaseHistoryRecord>?
+    ) {
+        DlogUtil.d(TAG, "????????")
+        DlogUtil.d(TAG, p0.responseCode)
+        if(!p1.isNullOrEmpty()) run {
+            DlogUtil.d(TAG, p1[0].quantity)
+        }
+    }
+
+//    suspend fun handlePurchase(purchase: Purchase) {
 //        ToastUtil.showShortToast(this, "구매 핸들링")
 //        //BillingClient#queryPurchasesAsync 혹은 onPurchasesUpdated에서 검색된 구매 목록
 //

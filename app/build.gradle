@@ -10,8 +10,8 @@ android {
         applicationId "com.mary.onandoff"
         minSdk 21
         targetSdk 32
-        versionCode 4
-        versionName "1.03"
+        versionCode 5
+        versionName "1.04"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,10 +42,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
     //구글 결제서비스
-    implementation("com.android.billingclient:billing-ktx:5.0.0")
-
-    //코루틴
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0'
+    implementation("com.android.billingclient:billing-ktx:5.0.0")dddd
 
     //Immutable Collection
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-collections-immutable

@@ -5,14 +5,9 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.android.billingclient.api.*
-import com.google.common.collect.ImmutableList
 import com.mary.onandoff.util.DlogUtil
+import com.mary.onandoff.util.GooglepayJavaUtil
 import com.mary.onandoff.util.GooglepayUtil
-import com.mary.onandoff.util.ToastUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -23,6 +18,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var billingCilent: BillingClient
     private var productDetailsList: List<ProductDetails> = mutableListOf()
     private lateinit var consumeListenser : ConsumeResponseListener
+    private lateinit var googlepayJavaUtil: GooglepayJavaUtil
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +29,16 @@ class MainActivity : AppCompatActivity() {
 //r
         setListener()
         GooglepayUtil.initBillingClient(this)
+
+        val googlepayJavaUtilDelegate = object : GooglepayJavaUtil.GooglepayJavaUtilDelegate {
+            override fun onSuccess() {
+                //code here
+            }
+        }
+
+//        GooglepayUtil.GooglepayUtilDelegate googlepayUtilDelegate = () -> ILog.iLogDebug(TAG, "onSuccess");
+//        googlepayUtil = new GooglepayUtil(googlepayUtilDelegate);
+
     }
 
     private fun initView() {
